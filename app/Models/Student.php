@@ -21,7 +21,6 @@ class Student extends Model
         'no_hp',
         'added_by',
         'is_active',
-        'photo', // kolom foto
     ];
 
     // Casting kolom is_active ke boolean

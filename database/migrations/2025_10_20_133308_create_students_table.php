@@ -21,8 +21,8 @@ return new class extends Migration
             $table->string('jurusan');
             $table->string('angkatan');
             $table->string('no_hp');
-            $table->string('added_by')->constrained('users')->onDelete('cascade');
-            $table->string('is_active')->default(true);
+            $table->string('added_by')->nullable();
+            $table->boolean('is_active')->default(1);
             $table->timestamps();
         });
     }

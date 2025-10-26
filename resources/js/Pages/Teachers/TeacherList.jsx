@@ -112,7 +112,7 @@
     return (
         <AuthenticatedLayout auth={auth} header="Daftar Teacher" title="Daftar Teacher">
         <Head title="Daftar Teacher" />
-        <div className="min-h-screen bg-white text-slate-900 px-8 py-10">
+        <div className="min-h-screen bg-white text-slate-900 px-8 py-10 rounded-lg shadow-lg">
             <h1 className="text-3xl font-bold mb-6">Daftar Teacher</h1>
 
             <TeacherSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} />

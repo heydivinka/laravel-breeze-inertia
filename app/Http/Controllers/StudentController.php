@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Student;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Storage;
 
 class StudentController extends Controller
 {
@@ -47,15 +46,7 @@ class StudentController extends Controller
             'no_hp' => 'required',
             'added_by' => 'nullable',
             'is_active' => 'boolean',
-            'photo' => 'nullable|image|max:5120',
         ]);
-
-        if ($request->hasFile('photo')) {
-            $file = $request->file('photo');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs('uploads', $filename, 'public');
-            $validated['photo'] = 'storage/' . $path;
-        }
 
         Student::create($validated);
         return redirect()->route('students.index')->with('success', 'Data berhasil ditambahkan!');
@@ -76,18 +67,7 @@ class StudentController extends Controller
             'no_hp' => 'required',
             'added_by' => 'nullable',
             'is_active' => 'boolean',
-            'photo' => 'nullable|image|max:5120',
         ]);
-
-        if ($request->hasFile('photo')) {
-            if ($student->photo && file_exists(public_path($student->photo))) {
-                unlink(public_path($student->photo));
-            }
-            $file = $request->file('photo');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs('uploads', $filename, 'public');
-            $validated['photo'] = 'storage/' . $path;
-        }
 
         $student->update($validated);
         return redirect()->route('students.index')->with('success', 'Data berhasil diperbarui!');
@@ -96,9 +76,6 @@ class StudentController extends Controller
     public function destroy($id)
     {
         $student = Student::findOrFail($id);
-        if ($student->photo && file_exists(public_path($student->photo))) {
-            unlink(public_path($student->photo));
-        }
         $student->delete();
 
         return redirect()->route('students.index')->with('success', 'Data berhasil dihapus!');
@@ -127,15 +104,7 @@ class StudentController extends Controller
                 'no_hp' => 'required',
                 'added_by' => 'nullable',
                 'is_active' => 'boolean',
-                'photo' => 'nullable|image|max:5120',
             ]);
-
-            if ($request->hasFile('photo')) {
-                $file = $request->file('photo');
-                $filename = time() . '_' . $file->getClientOriginalName();
-                $path = $file->storeAs('uploads', $filename, 'public');
-                $validated['photo'] = 'storage/' . $path;
-            }
 
             $student = Student::create($validated);
             return response()->json($student, 201);
@@ -163,18 +132,7 @@ class StudentController extends Controller
                 'no_hp' => 'required',
                 'added_by' => 'nullable',
                 'is_active' => 'boolean',
-                'photo' => 'nullable|image|max:5120',
             ]);
-
-            if ($request->hasFile('photo')) {
-                if ($student->photo && file_exists(public_path($student->photo))) {
-                    unlink(public_path($student->photo));
-                }
-                $file = $request->file('photo');
-                $filename = time() . '_' . $file->getClientOriginalName();
-                $path = $file->storeAs('uploads', $filename, 'public');
-                $validated['photo'] = 'storage/' . $path;
-            }
 
             $student->update($validated);
             return response()->json($student);
@@ -186,31 +144,29 @@ class StudentController extends Controller
     public function apiDestroy(Student $student)
     {
         try {
-            if ($student->photo && file_exists(public_path($student->photo))) {
-                unlink(public_path($student->photo));
-            }
             $student->delete();
             return response()->json(null, 204);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
- public function stats()
-{
-    $total = Student::count();
-    $active = Student::where('is_active', true)->count();
-    $inactive = Student::where('is_active', false)->count();
-    $byJurusan = Student::select('jurusan')
-        ->selectRaw('COUNT(*) as total')
-        ->groupBy('jurusan')
-        ->orderByDesc('total')
-        ->get();
 
-    return Inertia::render('Students/StudentStats', [
-        'total' => $total,
-        'active' => $active,
-        'inactive' => $inactive,
-        'byJurusan' => $byJurusan,
-    ]);
-}
+    public function stats()
+    {
+        $total = Student::count();
+        $active = Student::where('is_active', true)->count();
+        $inactive = Student::where('is_active', false)->count();
+        $byJurusan = Student::select('jurusan')
+            ->selectRaw('COUNT(*) as total')
+            ->groupBy('jurusan')
+            ->orderByDesc('total')
+            ->get();
+
+        return Inertia::render('Students/StudentStats', [
+            'total' => $total,
+            'active' => $active,
+            'inactive' => $inactive,
+            'byJurusan' => $byJurusan,
+        ]);
+    }
 }
