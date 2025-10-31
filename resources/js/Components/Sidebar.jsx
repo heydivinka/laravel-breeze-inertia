@@ -190,7 +190,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
     /* Navigation Items          */
     /* ------------------------- */
     const navItems = [
-        { name: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/" },
+        { name: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/dashboard" },
         {
             name: "Students",
             icon: <Users size={20} />,

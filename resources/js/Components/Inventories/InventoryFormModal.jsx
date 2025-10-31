@@ -1,15 +1,29 @@
 import { useState, useEffect } from "react";
 import Modal from "@/Components/Modal";
-import { X, Package, Layers, ClipboardList, Hash, MapPin, CheckCircle } from "lucide-react";
+import {
+    X,
+    Package,
+    Layers,
+    ClipboardList,
+    Hash,
+    MapPin,
+    CheckCircle,
+} from "lucide-react";
 import PrimaryButton from "@/Components/PrimaryButton";
 import api from "@/utils/api";
 import Swal from "sweetalert2";
 
-export default function InventoryFormModal({ isOpen, onClose, inventory, refresh }) {
+export default function InventoryFormModal({
+    isOpen,
+    onClose,
+    inventory,
+    refresh,
+    categories = [],
+}) {
     const [formData, setFormData] = useState({
         kode_barang: "",
         nama_barang: "",
-        kategori: "",
+        category_id: "",
         jumlah: "",
         deskripsi: "",
         lokasi_barang: "",
@@ -17,16 +31,17 @@ export default function InventoryFormModal({ isOpen, onClose, inventory, refresh
         is_active: true,
     });
 
+    // Sinkronisasi data dari props `inventory`
     useEffect(() => {
         if (inventory) {
             setFormData({
-                kode_barang: inventory.kode_barang || "",
-                nama_barang: inventory.nama_barang || "",
-                kategori: inventory.kategori || "",
-                jumlah: inventory.jumlah || "",
-                deskripsi: inventory.deskripsi || "",
-                lokasi_barang: inventory.lokasi_barang || "",
-                status: inventory.status || "",
+                kode_barang: inventory.kode_barang ?? "",
+                nama_barang: inventory.nama_barang ?? "",
+                category_id: inventory.category_id ?? "",
+                jumlah: inventory.jumlah ?? "",
+                deskripsi: inventory.deskripsi ?? "",
+                lokasi_barang: inventory.lokasi_barang ?? "",
+                status: inventory.status ?? "",
                 is_active: inventory.is_active ?? true,
             });
         }
@@ -34,41 +49,63 @@ export default function InventoryFormModal({ isOpen, onClose, inventory, refresh
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: type === "checkbox" ? checked : value,
-        }));
+        if (name === "kode_barang") {
+            const sanitized = value.replace(/\s/g, "").toUpperCase().slice(0, 20);
+            setFormData((prev) => ({ ...prev, [name]: sanitized }));
+        } else if (name === "jumlah") {
+            const numbersOnly = value.replace(/\D/g, "");
+            setFormData((prev) => ({ ...prev, [name]: numbersOnly }));
+        } else {
+            setFormData((prev) => ({
+                ...prev,
+                [name]: type === "checkbox" ? checked : value,
+            }));
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        try {
-            if (!inventory?.id) {
-                Swal.fire({
-                    icon: "error",
-                    title: "Data barang tidak ditemukan",
-                    text: "Pastikan data yang ingin diedit valid.",
-                });
-                return;
-            }
 
-            await api.put(`/inventories/${inventory.id}`, formData);
+        if (!inventory?.id) {
+            Swal.fire({
+                icon: "error",
+                title: "Data tidak ditemukan",
+                text: "Barang yang ingin diedit tidak valid.",
+            });
+            return;
+        }
+
+        if (!formData.nama_barang.trim() || !formData.kode_barang.trim()) {
+            Swal.fire({
+                icon: "warning",
+                title: "Input tidak lengkap",
+                text: "Nama dan kode barang wajib diisi.",
+            });
+            return;
+        }
+
+        try {
+            const response = await api.put(`/inventories/${inventory.id}`, formData);
+            const updated = response.data;
 
             Swal.fire({
                 icon: "success",
-                title: "Data diperbarui!",
-                timer: 1500,
+                title: "Berhasil!",
+                text: "Data barang berhasil diperbarui.",
+                timer: 1200,
                 showConfirmButton: false,
             });
 
-            refresh();
-            onClose();
+            if (refresh) refresh();
+
+            // Delay agar user sempat lihat notifikasi sukses
+            setTimeout(() => onClose(), 500);
         } catch (error) {
-            console.error("Update gagal:", error);
+            console.error("Gagal update:", error);
             Swal.fire({
                 icon: "error",
                 title: "Gagal memperbarui data",
-                text: "Periksa kembali inputan Anda atau koneksi server.",
+                text: error.response?.data?.message || "Periksa kembali inputan Anda.",
             });
         }
     };
@@ -80,7 +117,7 @@ export default function InventoryFormModal({ isOpen, onClose, inventory, refresh
             <div className="p-8 bg-white rounded-2xl shadow-2xl relative border border-gray-100">
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 p-2 text-gray-500 hover:text-red-600 rounded-full bg-gray-50 hover:bg-red-100 transition-colors"
+                    className="absolute top-4 right-4 p-2 text-gray-500 hover:text-red-600 rounded-full bg-gray-50 hover:bg-red-100 transition"
                 >
                     <X size={20} />
                 </button>
@@ -91,7 +128,7 @@ export default function InventoryFormModal({ isOpen, onClose, inventory, refresh
                 </h2>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Kode & Nama Barang */}
+                    {/* Kode Barang & Nama Barang */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="relative">
                             <input
@@ -101,9 +138,11 @@ export default function InventoryFormModal({ isOpen, onClose, inventory, refresh
                                 value={formData.kode_barang}
                                 onChange={handleChange}
                                 className="w-full pl-10 pr-4 py-2 border-gray-300 rounded-xl shadow-inner focus:ring-indigo-500 focus:border-indigo-500"
-                                required
                             />
-                            <Hash size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <Hash
+                                size={18}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                            />
                         </div>
 
                         <div className="relative">
@@ -114,24 +153,34 @@ export default function InventoryFormModal({ isOpen, onClose, inventory, refresh
                                 value={formData.nama_barang}
                                 onChange={handleChange}
                                 className="w-full pl-10 pr-4 py-2 border-gray-300 rounded-xl shadow-inner focus:ring-indigo-500 focus:border-indigo-500"
-                                required
                             />
-                            <ClipboardList size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <ClipboardList
+                                size={18}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                            />
                         </div>
                     </div>
 
                     {/* Kategori & Jumlah */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="relative">
-                            <input
-                                type="text"
-                                name="kategori"
-                                placeholder="Kategori"
-                                value={formData.kategori}
+                            <select
+                                name="category_id"
+                                value={formData.category_id || ""}
                                 onChange={handleChange}
-                                className="w-full pl-10 pr-4 py-2 border-gray-300 rounded-xl shadow-inner focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full pl-10 pr-4 py-2 border-gray-300 rounded-xl shadow-inner bg-white focus:ring-indigo-500 focus:border-indigo-500"
+                            >
+                                <option value="">Pilih Kategori</option>
+                                {categories.map((cat) => (
+                                    <option key={cat.id} value={cat.id}>
+                                        {cat.category_name}
+                                    </option>
+                                ))}
+                            </select>
+                            <Layers
+                                size={18}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
                             />
-                            <Layers size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         </div>
 
                         <div className="relative">
@@ -141,9 +190,13 @@ export default function InventoryFormModal({ isOpen, onClose, inventory, refresh
                                 placeholder="Jumlah"
                                 value={formData.jumlah}
                                 onChange={handleChange}
+                                min="0"
                                 className="w-full pl-10 pr-4 py-2 border-gray-300 rounded-xl shadow-inner focus:ring-indigo-500 focus:border-indigo-500"
                             />
-                            <ClipboardList size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <ClipboardList
+                                size={18}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                            />
                         </div>
                     </div>
 
@@ -158,7 +211,10 @@ export default function InventoryFormModal({ isOpen, onClose, inventory, refresh
                                 onChange={handleChange}
                                 className="w-full pl-10 pr-4 py-2 border-gray-300 rounded-xl shadow-inner focus:ring-indigo-500 focus:border-indigo-500"
                             />
-                            <MapPin size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <MapPin
+                                size={18}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                            />
                         </div>
 
                         <div className="relative">
@@ -170,8 +226,27 @@ export default function InventoryFormModal({ isOpen, onClose, inventory, refresh
                                 onChange={handleChange}
                                 className="w-full pl-10 pr-4 py-2 border-gray-300 rounded-xl shadow-inner focus:ring-indigo-500 focus:border-indigo-500"
                             />
-                            <Package size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <Package
+                                size={18}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                            />
                         </div>
+                    </div>
+
+                    {/* Deskripsi */}
+                    <div className="relative">
+                        <textarea
+                            name="deskripsi"
+                            placeholder="Deskripsi Barang"
+                            value={formData.deskripsi}
+                            onChange={handleChange}
+                            rows={3}
+                            className="w-full pl-10 pr-4 py-2 border-gray-300 rounded-xl shadow-inner focus:ring-indigo-500 focus:border-indigo-500"
+                        ></textarea>
+                        <ClipboardList
+                            size={18}
+                            className="absolute left-3 top-4 text-gray-400"
+                        />
                     </div>
 
                     {/* Toggle aktif */}
@@ -179,17 +254,24 @@ export default function InventoryFormModal({ isOpen, onClose, inventory, refresh
                         <input
                             type="checkbox"
                             name="is_active"
-                            id="active_toggle"
-                            checked={formData.is_active}
+                            id="inventory_active"
+                            checked={!!formData.is_active}
                             onChange={handleChange}
                             className="sr-only peer"
                         />
                         <label
-                            htmlFor="active_toggle"
+                            htmlFor="inventory_active"
                             className="relative block w-14 h-8 bg-gray-200 rounded-full peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:w-6 after:h-6 after:bg-white after:rounded-full after:transition-all peer-checked:after:translate-x-full cursor-pointer"
                         ></label>
                         <span className="text-base font-semibold text-gray-700 flex items-center gap-1">
-                            <CheckCircle size={18} className={formData.is_active ? "text-green-500" : "text-gray-400"} />
+                            <CheckCircle
+                                size={18}
+                                className={
+                                    formData.is_active
+                                        ? "text-green-500"
+                                        : "text-gray-400"
+                                }
+                            />
                             Status Aktif
                         </span>
                     </div>

@@ -6,8 +6,11 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-class CategoryController extends controller
+class CategoryController extends Controller
 {
+    // ==============================
+    // WEB METHODS (Inertia)
+    // ==============================
     public function index()
     {
         $categories = Category::all();
@@ -46,7 +49,7 @@ class CategoryController extends controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'category_name' => 'nullable',
+            'category_name' => 'nullable|string|max:255',
         ]);
 
         $category = Category::findOrFail($id);
@@ -63,5 +66,48 @@ class CategoryController extends controller
         $category->delete();
 
         return redirect()->route('categories.index')->with('success', 'Kategori berhasil dihapus.');
+    }
+
+    // ==============================
+    // API METHODS (JSON)
+    // ==============================
+
+    public function apiIndex()
+    {
+        return response()->json(Category::all());
+    }
+
+    public function apiShow(Category $category)
+    {
+        return response()->json($category);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $validated = $request->validate([
+            'category_name' => 'required|string|max:255',
+        ]);
+
+        $category = Category::create($validated);
+
+        return response()->json($category, 201);
+    }
+
+    public function apiUpdate(Request $request, Category $category)
+    {
+        $validated = $request->validate([
+            'category_name' => 'required|string|max:255',
+        ]);
+
+        $category->update($validated);
+
+        return response()->json($category);
+    }
+
+    public function apiDestroy(Category $category)
+    {
+        $category->delete();
+
+        return response()->json(['message' => 'Category deleted successfully']);
     }
 }

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\CategoryController; // ⬅️ Tambahkan ini di atas
 
 /*
 |--------------------------------------------------------------------------
@@ -40,3 +41,15 @@ Route::get('inventories/{inventory}', [InventoryController::class, 'apiShow']);
 Route::post('inventories', [InventoryController::class, 'apiStore']);
 Route::put('inventories/{inventory}', [InventoryController::class, 'apiUpdate']);
 Route::delete('inventories/{inventory}', [InventoryController::class, 'apiDestroy']);
+
+// ==============================
+// Category API
+// ==============================
+Route::get('categories', [CategoryController::class, 'apiIndex']); // ⬅️ Tambahan satu baris aman
+
+// ==============================
+// Barcode API
+// ==============================
+Route::get('inventories/barcode/{kode_barang}', [InventoryController::class, 'apiShowByBarcode']);
+
+

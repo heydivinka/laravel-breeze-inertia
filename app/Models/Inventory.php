@@ -20,8 +20,18 @@ class Inventory extends Model
         'is_active',
     ];
 
+    protected $attributes = [
+    'status' => 'tersedia',
+];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+        'jumlah' => 'integer',
+    ];
+
     public function category()
     {
-        return $this->belongsTo(category::class, 'category_id');
+        // FIX: use proper case for Category class
+        return $this->belongsTo(\App\Models\Category::class, 'category_id');
     }
 }

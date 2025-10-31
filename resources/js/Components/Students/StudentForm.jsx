@@ -70,6 +70,14 @@
         is_active: true,
     };
 
+    const jurusanOptions = [
+        "PPLG",
+        "Animasi",
+        "Broadcasting",
+        "Teknik Otomatif",
+        "TPFL",
+    ];
+
     const [formData, setFormData] = useState(defaultFormData);
     const [message, setMessage] = useState(null);
 
@@ -258,19 +266,28 @@
                 />
             </div>
 
-            {/* Jurusan */}
+            {/* Jurusan (Dropdown) */}
             <div>
                 <label className="text-sm font-medium text-gray-700 mb-1 block">
                 Jurusan
                 </label>
-                <InputWithIcon
-                Icon={GraduationCap}
-                name="jurusan"
-                placeholder="Jurusan"
-                value={formData.jurusan}
-                onChange={handleChange}
-                required
-                />
+                <div className="relative">
+                <GraduationCap className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                <select
+                    name="jurusan"
+                    value={formData.jurusan}
+                    onChange={handleChange}
+                    required
+                    className="bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all duration-200 py-2.5 pr-4 pl-10 w-full"
+                >
+                    <option value="">Pilih Jurusan</option>
+                    {jurusanOptions.map((opt) => (
+                    <option key={opt} value={opt}>
+                        {opt}
+                    </option>
+                    ))}
+                </select>
+                </div>
             </div>
 
             {/* Angkatan */}

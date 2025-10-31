@@ -1,70 +1,149 @@
-    import { Inertia } from '@inertiajs/inertia';
-    import { motion } from 'framer-motion';
-    import { FiUser , FiLogOut } from 'react-icons/fi';
+    import { useEffect, useState } from "react";
+    import { Head } from "@inertiajs/react";
+    import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+    import {
+    Users,
+    UserCheck,
+    Box,
+    TrendingUp,
+    CheckCircle2,
+    } from "lucide-react";
+    import { Bar } from "react-chartjs-2";
+    import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+    } from "chart.js";
 
-    export default function DashboardUser ({ user }) {
+    // Register chart elements
+    ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
+    export default function DashboardUser({ auth }) {
+    const [dashboardStats, setDashboardStats] = useState({
+        students: 0,
+        teachers: 0,
+        inventories: 0,
+    });
+
+    useEffect(() => {
+        const fetchStats = async () => {
+        try {
+            const resStudents = await fetch("/api/students");
+            const dataStudents = await resStudents.json();
+            const resTeachers = await fetch("/api/teachers");
+            const dataTeachers = await resTeachers.json();
+            const resInventories = await fetch("/api/inventories");
+            const dataInventories = await resInventories.json();
+
+            setDashboardStats({
+            students: dataStudents.length,
+            teachers: dataTeachers.length,
+            inventories: dataInventories.length,
+            });
+        } catch (err) {
+            console.error("Gagal fetch stats:", err);
+        }
+        };
+
+        fetchStats();
+    }, []);
+
+    const barData = {
+        labels: ["Students", "Teachers", "Inventories"],
+        datasets: [
+        {
+            label: "Jumlah",
+            data: [
+            dashboardStats.students,
+            dashboardStats.teachers,
+            dashboardStats.inventories,
+            ],
+            backgroundColor: ["#4f46e5", "#10b981", "#8b5cf6"],
+            borderRadius: 12,
+            barThickness: 40,
+        },
+        ],
+    };
+
+    const barOptions = {
+        responsive: true,
+        plugins: {
+        legend: { display: false },
+        tooltip: {
+            enabled: true,
+            backgroundColor: "#1f2937",
+            titleColor: "#f3f4f6",
+            bodyColor: "#f3f4f6",
+        },
+        },
+        scales: {
+        y: {
+            beginAtZero: true,
+            grid: { color: "#e5e7eb" },
+        },
+        x: {
+            grid: { display: false },
+        },
+        },
+    };
+
     return (
-        <div className="min-h-screen flex text-white bg-gradient-to-r from-black via-gray-900 to-black">
-        {/* Sidebar */}
-        <motion.div
-            initial={{ x: -250 }}
-            animate={{ x: 0 }}
-            className="w-64 bg-black/80 backdrop-blur-md border border-gray-700 shadow-lg p-6 flex flex-col"
-            style={{
-            boxShadow:
-                '0 0 20px 3px rgba(255, 255, 255, 0.1), 0 0 40px 10px rgba(255, 255, 255, 0.05)',
-            }}
-        >
-            <h1 className="text-2xl font-bold mb-8 text-white">User  Panel</h1>
-            <nav className="flex flex-col gap-4 flex-1">
-            <a
-                href="#profile"
-                className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
-            >
-                <FiUser  /> Profile
-            </a>
-            <button
-                onClick={(e) => {
-                e.preventDefault();
-                Inertia.post('/logout');
-                }}
-                className="flex items-center gap-2 text-red-500 hover:text-red-700 mt-auto transition-colors"
-            >
-                <FiLogOut /> Logout
-            </button>
-            </nav>
-        </motion.div>
+        <AuthenticatedLayout auth={auth} header="Dashboard" title="Dashboard">
+        <Head title="Dashboard" />
 
-        {/* Main Content */}
-        <div className="flex-1 p-8 bg-black/80 backdrop-blur-md rounded-3xl m-6 border border-gray-700 shadow-[0_0_30px_rgba(255,255,255,0.15)]">
-            <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-            >
-            <h2 className="text-3xl font-semibold text-white">Welcome, {user.name}</h2>
-            <p className="text-gray-400">Role: {user.role}</p>
-            </motion.div>
+        <main className="flex-1 p-6 space-y-6">
+            {/* Greeting */}
+            <div className="text-2xl font-bold text-gray-800">
+            Halo, <span className="text-indigo-600">{auth.user.name}</span> 👋
+            </div>
 
-            <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            >
-            <div className="bg-black/70 rounded-xl p-6 hover:scale-105 transition-transform border border-gray-700 shadow-lg">
-                <h3 className="text-lg font-semibold mb-2 text-white">Total Orders</h3>
-                <p className="text-2xl font-bold">12</p>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white/80 backdrop-blur-md shadow-xl rounded-xl p-6 hover:scale-105 transition-transform duration-300 border border-gray-200">
+                <Users className="text-indigo-500 w-8 h-8 mb-4" />
+                <h3 className="text-gray-500 font-medium">Students</h3>
+                <p className="text-3xl font-bold text-gray-900">{dashboardStats.students}</p>
             </div>
-            <div className="bg-black/70 rounded-xl p-6 hover:scale-105 transition-transform border border-gray-700 shadow-lg">
-                <h3 className="text-lg font-semibold mb-2 text-white">Messages</h3>
-                <p className="text-2xl font-bold">5</p>
+
+            <div className="bg-white/80 backdrop-blur-md shadow-xl rounded-xl p-6 hover:scale-105 transition-transform duration-300 border border-gray-200">
+                <UserCheck className="text-emerald-500 w-8 h-8 mb-4" />
+                <h3 className="text-gray-500 font-medium">Teachers</h3>
+                <p className="text-3xl font-bold text-gray-900">{dashboardStats.teachers}</p>
             </div>
-            <div className="bg-black/70 rounded-xl p-6 hover:scale-105 transition-transform border border-gray-700 shadow-lg">
-                <h3 className="text-lg font-semibold mb-2 text-white">Notifications</h3>
-                <p className="text-2xl font-bold">3</p>
+
+            <div className="bg-white/80 backdrop-blur-md shadow-xl rounded-xl p-6 hover:scale-105 transition-transform duration-300 border border-gray-200">
+                <Box className="text-purple-500 w-8 h-8 mb-4" />
+                <h3 className="text-gray-500 font-medium">Inventories</h3>
+                <p className="text-3xl font-bold text-gray-900">{dashboardStats.inventories}</p>
             </div>
-            </motion.div>
-        </div>
-        </div>
+            </div>
+
+            {/* Bar Chart */}
+            <div className="bg-white/80 backdrop-blur-md shadow-xl rounded-xl p-6 border border-gray-200">
+            <h2 className="text-gray-700 font-semibold mb-4">Statistik Modul</h2>
+            <Bar data={barData} options={barOptions} />
+            </div>
+
+            {/* Recent Activities */}
+            <div className="bg-white/80 backdrop-blur-md shadow-xl rounded-xl p-6 border border-gray-200">
+            <h2 className="text-gray-700 font-semibold mb-4">Aktivitas Terbaru</h2>
+            <ul className="space-y-3 text-gray-600">
+                <li className="flex items-center gap-3 hover:text-gray-900 transition-colors">
+                <TrendingUp className="w-5 h-5 text-indigo-500" /> Data siswa baru ditambahkan
+                </li>
+                <li className="flex items-center gap-3 hover:text-gray-900 transition-colors">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" /> Data guru diperbarui
+                </li>
+                <li className="flex items-center gap-3 hover:text-gray-900 transition-colors">
+                <Box className="w-5 h-5 text-purple-500" /> Inventaris terbaru masuk
+                </li>
+            </ul>
+            </div>
+        </main>
+        </AuthenticatedLayout>
     );
     }
