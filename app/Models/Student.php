@@ -9,7 +9,12 @@ class Student extends Model
 {
     use HasFactory;
 
-    // Kolom yang bisa diisi mass assignment
+    protected $table = 'students';
+
+    protected $primaryKey = 'id';
+    public $incrementing = true;
+    protected $keyType = 'int';
+
     protected $fillable = [
         'nisin',
         'nama_lengkap',
@@ -23,7 +28,6 @@ class Student extends Model
         'is_active',
     ];
 
-    // Casting kolom is_active ke boolean
     protected $casts = [
         'is_active' => 'boolean',
     ];

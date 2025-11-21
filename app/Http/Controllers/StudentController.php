@@ -151,6 +151,19 @@ class StudentController extends Controller
         }
     }
 
+        // GET /api/students/find/nisin/{nisin}
+    public function apiFindByNisin($nisin)
+    {
+        $student = Student::where('nisin', $nisin)->first();
+
+        if (!$student) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
+
+        return response()->json($student);
+    }
+
+
     public function stats()
     {
         $total = Student::count();

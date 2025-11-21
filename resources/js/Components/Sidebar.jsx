@@ -190,55 +190,60 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
     /* Navigation Items          */
     /* ------------------------- */
     const navItems = [
-        { name: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/dashboard" },
-        {
-            name: "Students",
-            icon: <Users size={20} />,
-            submenu: [
-                { name: "List Students", path: "/students" },
-                { name: "Add Student", path: "/students/add" },
-            ],
-        },
-        {
-            name: "Teachers",
-            icon: <GraduationCap size={20} />,
-            submenu: [
-                { name: "List Teachers", path: "/teachers" },
-                { name: "Add Teacher", path: "/teachers/add" },
-            ],
-        },
-        {
-            name: "Inventories",
-            icon: <Boxes size={20} />,
-            submenu: [
-                { name: "List Inventory", path: "/inventories" },
-                { name: "Add Inventory", path: "/inventories/add" },
-            ],
-        },
-        {
-            name: "Resources",
-            icon: <BookOpen size={20} />,
-            submenu: [
-                { name: "Files", path: "/files" },
-                { name: "Reports", path: "/reports" },
-            ],
-        },
-        {
-            name: "Calendar",
-            icon: <Calendar size={20} />,
-            submenu: [{ name: "Events", path: "/events" }, { name: "Schedules", path: "/schedules" }],
-        },
-        {
-            name: "Analytics",
-            icon: <BarChart2 size={20} />,
-            submenu: [{ name: "Overview", path: "/analytics" }],
-        },
-        {
-            name: "Archive",
-            icon: <Archive size={20} />,
-            submenu: [{ name: "Old Records", path: "/archive" }],
-        },
-    ];
+    { name: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/dashboard" },
+    {
+        name: "Students",
+        icon: <Users size={20} />,
+        submenu: [
+            { name: "List Students", path: "/students" },
+            { name: "Add Student", path: "/students/add" },
+        ],
+    },
+    {
+        name: "Teachers",
+        icon: <GraduationCap size={20} />,
+        submenu: [
+            { name: "List Teachers", path: "/teachers" },
+            { name: "Add Teacher", path: "/teachers/add" },
+        ],
+    },
+    {
+        name: "Inventories",
+        icon: <Boxes size={20} />,
+        submenu: [
+            { name: "List Inventory", path: "/inventories" },
+            { name: "Add Inventory", path: "/inventories/add" },
+        ],
+    },
+    {
+    name: "Category",
+    icon: <Calendar size={20} />,
+    submenu: [
+        { name: "Category Page", path: "/categories" },
+        { name: "Category Show", path: "/categories/1" }, // Contoh default path ke 1
+    ],
+},
+{
+    name: "Peminjaman",
+    icon: <BookOpen size={20} />,
+    submenu: [
+        { name: "List Peminjaman", path: "/peminjaman" },
+        { name: "Add Peminjaman", path: "/peminjaman/add" },
+    ],
+},
+
+    {
+        name: "Analytics",
+        icon: <BarChart2 size={20} />,
+        submenu: [{ name: "Overview", path: "/analytics" }],
+    },
+    {
+        name: "Archive",
+        icon: <Archive size={20} />,
+        submenu: [{ name: "Old Records", path: "/archive" }],
+    },
+];
+
 
     /* ------------------------- */
     /* Render                    */

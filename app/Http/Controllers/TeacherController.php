@@ -95,6 +95,8 @@ class TeacherController extends Controller
         return response()->json($teachers);
     }
 
+    
+
     // POST /api/teachers
     public function apiStore(Request $request)
     {
@@ -141,6 +143,19 @@ class TeacherController extends Controller
         $teacher->delete();
         return response()->json(null, 204);
     }
+
+        // GET /api/teachers/find/nip/{nip}
+    public function apiFindByNip($nip)
+    {
+        $teacher = Teacher::where('nip', $nip)->first();
+
+        if (!$teacher) {
+            return response()->json(['message' => 'Teacher not found'], 404);
+        }
+
+        return response()->json($teacher);
+    }
+
 
     // Stats page (Inertia)
     public function stats()

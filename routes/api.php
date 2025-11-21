@@ -4,7 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\InventoryController;
-use App\Http\Controllers\CategoryController; // ⬅️ Tambahkan ini di atas
+use App\Http\Controllers\CategoryController; 
+use App\Http\Controllers\PeminjamanController; 
 
 /*
 |--------------------------------------------------------------------------
@@ -14,6 +15,12 @@ use App\Http\Controllers\CategoryController; // ⬅️ Tambahkan ini di atas
 | Semua route menggunakan API controller methods.
 |--------------------------------------------------------------------------
 */
+
+// ===================================================
+// FIND ROUTES — Harus di atas route dinamis {student}
+// ===================================================
+Route::get('students/find/nisin/{nisin}', [StudentController::class, 'apiFindByNisin']);
+Route::get('teachers/find/nip/{nip}', [TeacherController::class, 'apiFindByNip']);
 
 // ==============================
 // Student API
@@ -51,5 +58,14 @@ Route::get('categories', [CategoryController::class, 'apiIndex']); // ⬅️ Tam
 // Barcode API
 // ==============================
 Route::get('inventories/barcode/{kode_barang}', [InventoryController::class, 'apiShowByBarcode']);
+Route::get('/categories/{category}/inventories', [CategoryController::class, 'apiShowInventories']);
 
+// Peminjaman API
+Route::get('peminjaman', [PeminjamanController::class, 'apiIndex']);
+Route::get('peminjaman/{peminjaman}', [PeminjamanController::class, 'apiShow']);
+Route::post('peminjaman', [PeminjamanController::class, 'apiStore']);
+Route::put('peminjaman/{peminjaman}', [PeminjamanController::class, 'apiUpdate']);
+Route::delete('peminjaman/{peminjaman}', [PeminjamanController::class, 'apiDestroy']);
 
+// Peminjam API (gabung murid & guru misalnya)
+Route::get('peminjam/{role}/{id}', [PeminjamanController::class, 'apiGetPeminjam']);    
