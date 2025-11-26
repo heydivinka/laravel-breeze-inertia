@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { ChevronUp, ChevronDown, Trash2, PencilLine, Plus } from "lucide-react";
+import { useState, useRef } from "react";
+import { ChevronUp, ChevronDown, Plus, CheckCircle, Download } from "lucide-react";
+import StatusBadge from "@/Components/StatusBadge";
+import Swal from "sweetalert2";
 
 /**
  * Tabel Peminjaman
@@ -11,6 +13,9 @@ export default function PeminjamanTable({ data = [], onDelete, onEdit, onAdd }) 
     const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [showExport, setShowExport] = useState(false);
+
+    const exportRef = useRef(null);
 
     const headers = [
         { label: "ID", key: "id" },
@@ -21,24 +26,22 @@ export default function PeminjamanTable({ data = [], onDelete, onEdit, onAdd }) 
         { label: "Tanggal Kembali", key: "tanggal_kembali" },
         { label: "Keterangan", key: "keterangan" },
         { label: "Added By", key: "added_by" },
+        { label: "Status", key: "status" },
     ];
 
     const requestSort = (key) => {
         let direction = "asc";
-        if (sortConfig.key === key && sortConfig.direction === "asc") {
-            direction = "desc";
-        }
+        if (sortConfig.key === key && sortConfig.direction === "asc") direction = "desc";
         setSortConfig({ key, direction });
     };
 
     const sortedData = [...safeData].sort((a, b) => {
         if (!sortConfig.key) return 0;
-        const aVal = a[sortConfig.key];
-        const bVal = b[sortConfig.key];
         const normalize = (val) => (typeof val === "string" ? val.toLowerCase() : val);
-
-        if (normalize(aVal) < normalize(bVal)) return sortConfig.direction === "asc" ? -1 : 1;
-        if (normalize(aVal) > normalize(bVal)) return sortConfig.direction === "asc" ? 1 : -1;
+        const aVal = normalize(a[sortConfig.key]);
+        const bVal = normalize(b[sortConfig.key]);
+        if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
         return 0;
     });
 
@@ -47,19 +50,99 @@ export default function PeminjamanTable({ data = [], onDelete, onEdit, onAdd }) 
     const currentData = sortedData.slice(indexOfFirst, indexOfLast);
     const totalPages = Math.ceil(sortedData.length / rowsPerPage);
 
+    const handleReturn = (id) => {
+        Swal.fire({
+            title: "Konfirmasi Pengembalian",
+            text: "Apakah peminjaman sudah dikembalikan?",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "Ya, Dikembalikan",
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/peminjaman/${id}/status`, {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify({ status: "dikembalikan" }),
+                }).then(() => window.location.reload());
+            }
+        });
+    };
+
+    const handleExport = async (type) => {
+        Swal.fire({
+            title: "Proses Export",
+            text: `File akan diunduh dalam format ${type.toUpperCase()}`,
+            icon: "info",
+            showConfirmButton: true,
+        }).then(async () => {
+            try {
+                const response = await fetch(`/peminjaman/export/${type}`);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `laporan_peminjaman.${type === "excel" ? "xlsx" : "pdf"}`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                Swal.fire("Gagal", `Export ${type.toUpperCase()} gagal.`, "error");
+            }
+        });
+    };
+
     return (
         <div className="w-full overflow-hidden">
+            {/* Header & tombol tambah / export */}
             <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
                 <h2 className="text-2xl font-extrabold text-gray-800">Data Peminjaman</h2>
-                <button
-                    onClick={onAdd}
-                    className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:bg-indigo-700 transition-all duration-300 transform hover:scale-[1.01] focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50"
-                >
-                    <Plus size={20} />
-                    Tambah Peminjaman
-                </button>
+
+                <div className="flex gap-2 flex-wrap relative">
+                    {/* Tombol Export */}
+                    <button
+                        onClick={() => setShowExport(!showExport)}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 transition-all duration-200"
+                    >
+                        <Download size={18} />
+                        Export
+                    </button>
+
+                    {showExport && (
+                        <div
+                            ref={exportRef}
+                            className="absolute mt-1 w-44 bg-white shadow-lg rounded-md overflow-hidden z-10"
+                        >
+                            <button
+                                onClick={() => handleExport("pdf")}
+                                className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                            >
+                                Download to .pdf
+                            </button>
+                            <button
+                                onClick={() => handleExport("excel")}
+                                className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                            >
+                                Download to .xlsx
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Tombol tambah */}
+                    <button
+                        onClick={onAdd}
+                        className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:bg-indigo-700 transition-all duration-300 transform hover:scale-[1.01] focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50"
+                    >
+                        <Plus size={20} />
+                        Tambah Peminjaman
+                    </button>
+                </div>
             </div>
 
+            {/* Tabel */}
             <div className="overflow-x-auto md:overflow-x-hidden w-full bg-white rounded-xl shadow-lg border border-gray-200">
                 <div className="min-w-full">
                     <table className="table-auto w-full border-collapse">
@@ -96,21 +179,17 @@ export default function PeminjamanTable({ data = [], onDelete, onEdit, onAdd }) 
                                         <td className="px-4 py-3 break-words max-w-[120px]">{p.tanggal_kembali}</td>
                                         <td className="px-4 py-3 break-words max-w-[200px]">{p.keterangan}</td>
                                         <td className="px-4 py-3 break-words max-w-[120px]">{p.added_by}</td>
-
+                                        <td className="px-4 py-3 break-words max-w-[140px]">
+                                            <StatusBadge status={p.status} />
+                                        </td>
                                         <td className="px-4 py-3 flex gap-2 flex-wrap">
                                             <button
-                                                onClick={() => onEdit && onEdit(p)}
-                                                title="Edit data"
-                                                className="p-2 rounded-lg bg-indigo-100 text-indigo-600 hover:bg-indigo-200 hover:scale-105 transition-transform duration-150 shadow-sm"
+                                                onClick={() => handleReturn(p.id)}
+                                                title="Kembalikan"
+                                                className="p-2 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 hover:scale-105 transition-transform duration-150 shadow-sm"
+                                                disabled={p.status === "dikembalikan"}
                                             >
-                                                <PencilLine size={18} />
-                                            </button>
-                                            <button
-                                                onClick={() => onDelete && onDelete(p.id)}
-                                                title="Hapus data"
-                                                className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 hover:scale-105 transition-transform duration-150 shadow-sm"
-                                            >
-                                                <Trash2 size={18} />
+                                                <CheckCircle size={18} />
                                             </button>
                                         </td>
                                     </tr>
@@ -127,6 +206,7 @@ export default function PeminjamanTable({ data = [], onDelete, onEdit, onAdd }) 
                     </table>
                 </div>
 
+                {/* Pagination */}
                 <div className="flex flex-col md:flex-row md:justify-between items-center gap-4 px-5 py-4 bg-gray-50 border-t border-gray-200">
                     <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-600 font-medium">Baris per halaman:</span>

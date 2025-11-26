@@ -49,13 +49,14 @@
         export default function PeminjamanForm({ fetchPeminjaman, selected, setSelected }) {
         // 🚨 PERBAIKAN: Simplifikasi state management
         const defaultFormData = {
-            peminjam_id: "",      // Langsung simpan NISIN/NIP di sini
-            role: "",
-            inventory_id: "",
-            tanggal_pinjam: "",
-            tanggal_kembali: "",
-            keterangan: "",
-        };
+        peminjam_id: "",
+        peminjam_input: "",  // <-- WAJIB
+        role: "",
+        inventory_id: "",
+        tanggal_pinjam: "",
+        tanggal_kembali: "",
+        keterangan: "",
+    };
 
             const [formData, setFormData] = useState(defaultFormData);
             const [peminjamInfo, setPeminjamInfo] = useState(null); // Untuk info nama dll
@@ -82,18 +83,22 @@
         };
 
         useEffect(() => {
-            if (selected) {
-                setFormData({
-                    ...defaultFormData,
-                    ...selected,
-                    peminjam_input: selected?.nisin || selected?.nip || "",
-                    tanggal_pinjam: formatDate(selected.tanggal_pinjam),
-                    tanggal_kembali: formatDate(selected.tanggal_kembali),
-                });
-            } else {
-                setFormData(defaultFormData);
-            }
-        }, [selected]);
+    if (selected) {
+        setFormData({
+            ...defaultFormData,
+            peminjam_id: selected.peminjam_id,
+            role: selected.role,                           // WAJIB
+            inventory_id: selected.inventory_id,
+            peminjam_input: selected.peminjam_id,          // supaya bisa dicek ulang
+            tanggal_pinjam: selected.tanggal_pinjam,
+            tanggal_kembali: selected.tanggal_kembali,
+            keterangan: selected.keterangan,
+        });
+    } else {
+        setFormData(defaultFormData);
+    }
+}, [selected]);
+
 
         const handleChange = (e) => {
             const { name, value } = e.target;
@@ -105,9 +110,6 @@
             setSelected(null);
         };
 
-        // =============================================
-    //  CEK NISIN / NIP (versi benar)
-    // =============================================
     // =============================================
     //  CEK NISIN / NIP (VERSI BENAR, HARUS DIPAKAI)
     // =============================================

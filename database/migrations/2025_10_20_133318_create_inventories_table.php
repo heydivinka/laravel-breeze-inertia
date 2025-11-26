@@ -15,8 +15,8 @@
                 $table->id();
                 $table->string('kode_barang')->unique(); // barcode / product code
                 $table->string('nama_barang');
-                $table->unsignedBigInteger('category_id')->nullable();
-                $table->integer('jumlah')->default(0);
+                // $table->unsignedBigInteger('category_id')->nullable();
+                $table->integer('jumlah')->default(value: 0);
                 $table->text('deskripsi')->nullable();
                 $table->string('status')->nullable();
                 $table->string('lokasi_barang')->nullable();

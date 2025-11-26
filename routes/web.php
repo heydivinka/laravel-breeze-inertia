@@ -118,6 +118,15 @@ Route::put('/peminjaman/{id}', [PeminjamanController::class, 'update'])->name('p
 // Hapus peminjaman
 Route::delete('/peminjaman/{id}', [PeminjamanController::class, 'destroy'])->name('peminjaman.destroy');
 
+/*
+        |--------------------------------------------------------------------------
+        | Export Routes
+        |--------------------------------------------------------------------------
+        */
+        Route::get('/peminjaman/export/pdf', [PeminjamanController::class, 'downloadPdf']);
+        Route::get('/peminjaman/export/excel', [PeminjamanController::class, 'exportExcel']);
+
+
         /*
         |--------------------------------------------------------------------------
         | Statistik Routes

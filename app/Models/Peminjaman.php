@@ -31,7 +31,7 @@ class Peminjaman extends Model
         return $this->belongsTo(Inventory::class, 'inventory_id');
     }
 
-        public function peminjam()
+    public function peminjam()
     {
         return $this->belongsTo(User::class, 'peminjam_id');
     }
@@ -39,6 +39,23 @@ class Peminjaman extends Model
     public function addedBy()
     {
         return $this->belongsTo(User::class, 'added_by');
+    }
+
+
+    /**
+     * Relasi peminjam ke Student (jika role = student)
+     */
+    public function student()
+    {
+        return $this->belongsTo(Student::class, 'peminjam_id', 'nisin');
+    }
+
+    /**
+     * Relasi peminjam ke Teacher (jika role = teacher)
+     */
+    public function teacher()
+    {
+        return $this->belongsTo(Teacher::class, 'peminjam_id', 'nip');
     }
 
 }

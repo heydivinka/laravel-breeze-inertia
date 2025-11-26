@@ -9,6 +9,9 @@ use App\Models\Student;
 use App\Models\Teacher;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\PeminjamanExport;
 
 class PeminjamanController extends Controller
 {
@@ -25,7 +28,6 @@ class PeminjamanController extends Controller
             ->paginate(10)
             ->through(function ($p) {
 
-                // Ambil murid/guru berdasarkan nisin / nip
                 $peminjam = $p->role === 'murid'
                     ? Student::where('nisin', $p->peminjam_id)->first()
                     : Teacher::where('nip', $p->peminjam_id)->first();
@@ -39,6 +41,7 @@ class PeminjamanController extends Controller
                     'tanggal_pinjam' => $p->tanggal_pinjam,
                     'tanggal_kembali' => $p->tanggal_kembali,
                     'keterangan' => $p->keterangan,
+                    'status' => $p->status,
                     'added_by' => $p->added_by,
                 ];
             });
@@ -75,6 +78,7 @@ class PeminjamanController extends Controller
                     'tanggal_pinjam' => $p->tanggal_pinjam,
                     'tanggal_kembali' => $p->tanggal_kembali,
                     'keterangan' => $p->keterangan,
+                    'status' => $p->status,
                     'added_by' => $p->added_by,
                 ];
             });
@@ -87,7 +91,7 @@ class PeminjamanController extends Controller
      */
     public function create()
     {
-        $inventories = Inventory::where('status', 'tersedia')
+        $inventories = Inventory::where('jumlah', '>', 0)
             ->orderBy('nama_barang')
             ->get(['id', 'nama_barang']);
 
@@ -97,152 +101,140 @@ class PeminjamanController extends Controller
     }
 
     /**
- * 💾 Simpan data peminjaman baru - FIXED VERSION
- */
-public function store(Request $request)
-{
-    $validated = $request->validate([
-        'peminjam_id' => 'required|string',
-        'role' => 'required|string|in:guru,murid',
-        'inventory_id' => 'required|exists:inventories,id',
-        'tanggal_pinjam' => 'required|date',
-        'tanggal_kembali' => 'required|date|after_or_equal:tanggal_pinjam',
-        'keterangan' => 'nullable|string',
-    ]);
+     * 💾 Simpan data peminjaman baru - FIX JUMLAH
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'peminjam_id' => 'required|string',
+            'role' => 'required|string|in:guru,murid',
+            'inventory_id' => 'required|exists:inventories,id',
+            'tanggal_pinjam' => 'required|date',
+            'tanggal_kembali' => 'required|date|after_or_equal:tanggal_pinjam',
+            'keterangan' => 'nullable|string',
+        ]);
 
-    try {
-        DB::transaction(function () use ($validated, $request) {
-            $inventory = Inventory::findOrFail($request->inventory_id);
+        try {
+            DB::transaction(function () use ($validated, $request) {
+                $inventory = Inventory::findOrFail($request->inventory_id);
 
-            if ($inventory->status !== 'tersedia') {
-                throw new \Exception('Barang ini sedang tidak tersedia untuk dipinjam.');
-            }
-
-            // 🚨 PERBAIKAN UTAMA: Handle kedua skenario (ID internal dan NISIN/NIP)
-            if ($request->role === 'murid') {
-                // Coba cari berdasarkan nisin dulu
-                $peminjam = Student::where('nisin', $request->peminjam_id)->first();
-                
-                // Jika tidak ketemu, mungkin frontend kirim ID internal
-                if (!$peminjam && is_numeric($request->peminjam_id)) {
-                    $peminjam = Student::find($request->peminjam_id);
+                if ($inventory->jumlah <= 0) {
+                    throw new \Exception('Barang ini sedang tidak tersedia untuk dipinjam.');
                 }
-                
-                $peminjamId = $peminjam?->nisin;
-            } else {
-                // Coba cari berdasarkan nip dulu
-                $peminjam = Teacher::where('nip', $request->peminjam_id)->first();
-                
-                // Jika tidak ketemu, mungkin frontend kirim ID internal
-                if (!$peminjam && is_numeric($request->peminjam_id)) {
-                    $peminjam = Teacher::find($request->peminjam_id);
+
+                if ($request->role === 'murid') {
+                    $peminjam = Student::where('nisin', $request->peminjam_id)->first();
+
+                    if (!$peminjam && is_numeric($request->peminjam_id)) {
+                        $peminjam = Student::find($request->peminjam_id);
+                    }
+
+                    $peminjamId = $peminjam?->nisin;
+                } else {
+                    $peminjam = Teacher::where('nip', $request->peminjam_id)->first();
+
+                    if (!$peminjam && is_numeric($request->peminjam_id)) {
+                        $peminjam = Teacher::find($request->peminjam_id);
+                    }
+
+                    $peminjamId = $peminjam?->nip;
                 }
-                
-                $peminjamId = $peminjam?->nip;
-            }
 
-            if (!$peminjamId) {
-                throw new \Exception('ID peminjam tidak valid. Pastikan NISIN/NIP benar.');
-            }
+                if (!$peminjamId) {
+                    throw new \Exception('ID peminjam tidak valid. Pastikan NISIN/NIP benar.');
+                }
 
-            Peminjaman::create([
-                'peminjam_id' => $peminjamId, // Simpan sebagai NISIN/NIP
-                'role' => $request->role,
-                'inventory_id' => $request->inventory_id,
-                'tanggal_pinjam' => $request->tanggal_pinjam,
-                'tanggal_kembali' => $request->tanggal_kembali,
-                'keterangan' => $request->keterangan,
-                'added_by' => auth()->id() ?? 'system',
-            ]);
+                Peminjaman::create([
+                    'peminjam_id' => $peminjamId,
+                    'role' => $request->role,
+                    'inventory_id' => $request->inventory_id,
+                    'tanggal_pinjam' => $request->tanggal_pinjam,
+                    'tanggal_kembali' => $request->tanggal_kembali,
+                    'keterangan' => $request->keterangan,
+                    'status' => 'dipinjam',
+                    'added_by' => auth()->id() ?? 'system',
+                ]);
 
-            $inventory->update(['status' => 'dipinjam']);
-        });
+                $inventory->jumlah -= 1;
+                $inventory->status = $inventory->jumlah > 0 ? 'tersedia' : 'habis';
+                $inventory->save();
+            });
 
-        return redirect()->route('peminjaman.index')
-            ->with('success', 'Peminjaman berhasil disimpan.');
+            return redirect()->route('peminjaman.index')
+                ->with('success', 'Peminjaman berhasil disimpan.');
 
-    } catch (\Exception $e) {
-        return redirect()->back()
-            ->withInput()
-            ->withErrors(['error' => $e->getMessage()]);
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => $e->getMessage()]);
+        }
     }
-}
-
-/**
- * API STORE - FIXED VERSION
- */
-public function apiStore(Request $request)
-{
-    $validated = $request->validate([
-        'peminjam_id' => 'required|string',
-        'role' => 'required|string|in:guru,murid',
-        'inventory_id' => 'required|exists:inventories,id',
-        'tanggal_pinjam' => 'required|date',
-        'tanggal_kembali' => 'required|date|after_or_equal:tanggal_pinjam',
-        'keterangan' => 'nullable|string',
-    ]);
-
-    try {
-        DB::transaction(function () use ($validated, $request) {
-            $inventory = Inventory::findOrFail($request->inventory_id);
-
-            if ($inventory->status !== 'tersedia') {
-                throw new \Exception('Barang ini sedang tidak tersedia untuk dipinjam.');
-            }
-
-            // 🚨 PERBAIKAN YANG SAMA UNTUK API
-            if ($request->role === 'murid') {
-                $peminjam = Student::where('nisin', $request->peminjam_id)->first();
-                
-                if (!$peminjam && is_numeric($request->peminjam_id)) {
-                    $peminjam = Student::find($request->peminjam_id);
-                }
-                
-                $peminjamId = $peminjam?->nisin;
-            } else {
-                $peminjam = Teacher::where('nip', $request->peminjam_id)->first();
-                
-                if (!$peminjam && is_numeric($request->peminjam_id)) {
-                    $peminjam = Teacher::find($request->peminjam_id);
-                }
-                
-                $peminjamId = $peminjam?->nip;
-            }
-
-            if (!$peminjamId) {
-                throw new \Exception('ID peminjam tidak valid.');
-            }
-
-            Peminjaman::create([
-                'peminjam_id' => $peminjamId,
-                'role' => $request->role,
-                'inventory_id' => $request->inventory_id,
-                'tanggal_pinjam' => $request->tanggal_pinjam,
-                'tanggal_kembali' => $request->tanggal_kembali,
-                'keterangan' => $request->keterangan,
-                'added_by' => auth()->id() ?? 'system',
-            ]);
-
-            $inventory->update(['status' => 'dipinjam']);
-        });
-
-        return response()->json(['message' => 'Peminjaman berhasil disimpan'], 201);
-
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 400);
-    }
-}
 
     /**
-     * 🔍 Detail peminjaman
+     * API STORE - FIX JUMLAH
      */
-    public function show($id)
+    public function apiStore(Request $request)
     {
-        $peminjaman = Peminjaman::with('inventory')->findOrFail($id);
-
-        return Inertia::render('Peminjaman/PeminjamanShow', [
-            'peminjaman' => $peminjaman,
+        $validated = $request->validate([
+            'peminjam_id' => 'required|string',
+            'role' => 'required|string|in:guru,murid',
+            'inventory_id' => 'required|exists:inventories,id',
+            'tanggal_pinjam' => 'required|date',
+            'tanggal_kembali' => 'required|date|after_or_equal:tanggal_pinjam',
+            'keterangan' => 'nullable|string',
         ]);
+
+        try {
+            DB::transaction(function () use ($validated, $request) {
+                $inventory = Inventory::findOrFail($request->inventory_id);
+
+                if ($inventory->jumlah <= 0) {
+                    throw new \Exception('Barang ini sedang tidak tersedia untuk dipinjam.');
+                }
+
+                if ($request->role === 'murid') {
+                    $peminjam = Student::where('nisin', $request->peminjam_id)->first();
+
+                    if (!$peminjam && is_numeric($request->peminjam_id)) {
+                        $peminjam = Student::find($request->peminjam_id);
+                    }
+
+                    $peminjamId = $peminjam?->nisin;
+                } else {
+                    $peminjam = Teacher::where('nip', $request->peminjam_id)->first();
+
+                    if (!$peminjam && is_numeric($request->peminjam_id)) {
+                        $peminjam = Teacher::find($request->peminjam_id);
+                    }
+
+                    $peminjamId = $peminjam?->nip;
+                }
+
+                if (!$peminjamId) {
+                    throw new \Exception('ID peminjam tidak valid.');
+                }
+
+                Peminjaman::create([
+                    'peminjam_id' => $peminjamId,
+                    'role' => $request->role,
+                    'inventory_id' => $request->inventory_id,
+                    'tanggal_pinjam' => $request->tanggal_pinjam,
+                    'tanggal_kembali' => $request->tanggal_kembali,
+                    'keterangan' => $request->keterangan,
+                    'status' => 'dipinjam',
+                    'added_by' => auth()->id() ?? 'system',
+                ]);
+
+                $inventory->jumlah -= 1;
+                $inventory->status = $inventory->jumlah > 0 ? 'tersedia' : 'habis';
+                $inventory->save();
+            });
+
+            return response()->json(['message' => 'Peminjaman berhasil disimpan'], 201);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
     }
 
     /**
@@ -261,70 +253,112 @@ public function apiStore(Request $request)
     }
 
     /**
- * 🔁 Update peminjaman - FIXED VERSION
- */
-public function update(Request $request, $id)
-{
-    $validated = $request->validate([
-        'peminjam_id' => 'required|string',
-        'role' => 'required|string|in:guru,murid',
-        'inventory_id' => 'required|exists:inventories,id',
-        'tanggal_pinjam' => 'required|date',
-        'tanggal_kembali' => 'required|date|after_or_equal:tanggal_pinjam',
-        'keterangan' => 'nullable|string',
-    ]);
+     * 🔁 Update peminjaman - FIX JUMLAH
+     */
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'peminjam_id' => 'required|string',
+            'role' => 'required|string|in:guru,murid',
+            'inventory_id' => 'required|exists:inventories,id',
+            'tanggal_pinjam' => 'required|date',
+            'tanggal_kembali' => 'required|date|after_or_equal:tanggal_pinjam',
+            'keterangan' => 'nullable|string',
+        ]);
 
-    try {
-        DB::transaction(function () use ($id, $validated, $request) {
-            $peminjaman = Peminjaman::findOrFail($id);
+        try {
+            DB::transaction(function () use ($id, $validated, $request) {
+                $peminjaman = Peminjaman::findOrFail($id);
 
-            // 🚨 TERAPKAN LOGIKA YANG SAMA
-            if ($request->role === 'murid') {
-                $peminjam = Student::where('nisin', $request->peminjam_id)->first();
-                
-                if (!$peminjam && is_numeric($request->peminjam_id)) {
-                    $peminjam = Student::find($request->peminjam_id);
+                if ($request->role === 'murid') {
+                    $peminjam = Student::where('nisin', $request->peminjam_id)->first();
+
+                    if (!$peminjam && is_numeric($request->peminjam_id)) {
+                        $peminjam = Student::find($request->peminjam_id);
+                    }
+
+                    $peminjamId = $peminjam?->nisin;
+                } else {
+                    $peminjam = Teacher::where('nip', $request->peminjam_id)->first();
+
+                    if (!$peminjam && is_numeric($request->peminjam_id)) {
+                        $peminjam = Teacher::find($request->peminjam_id);
+                    }
+
+                    $peminjamId = $peminjam?->nip;
                 }
-                
-                $peminjamId = $peminjam?->nisin;
-            } else {
-                $peminjam = Teacher::where('nip', $request->peminjam_id)->first();
-                
-                if (!$peminjam && is_numeric($request->peminjam_id)) {
-                    $peminjam = Teacher::find($request->peminjam_id);
+
+                if (!$peminjamId) {
+                    throw new \Exception('ID peminjam tidak valid.');
                 }
-                
-                $peminjamId = $peminjam?->nip;
+
+                if ($peminjaman->inventory_id != $request->inventory_id) {
+
+                    $old = Inventory::find($peminjaman->inventory_id);
+                    if ($old) {
+                        $old->jumlah += 1;
+                        $old->status = $old->jumlah > 0 ? 'tersedia' : 'habis';
+                        $old->save();
+                    }
+
+                    $new = Inventory::find($request->inventory_id);
+                    if ($new->jumlah <= 0) {
+                        throw new \Exception('Barang yang baru dipilih sedang tidak tersedia.');
+                    }
+
+                    $new->jumlah -= 1;
+                    $new->status = $new->jumlah > 0 ? 'tersedia' : 'habis';
+                    $new->save();
+                }
+
+                $peminjaman->update([
+                    'peminjam_id' => $peminjamId,
+                    'role' => $request->role,
+                    'inventory_id' => $request->inventory_id,
+                    'tanggal_pinjam' => $request->tanggal_pinjam,
+                    'tanggal_kembali' => $request->tanggal_kembali,
+                    'keterangan' => $request->keterangan,
+                ]);
+            });
+
+            return redirect()->route('peminjaman.index')
+                ->with('success', 'Data peminjaman berhasil diperbarui.');
+
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 🔄 Update Status + Kembalikan Stok
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|in:dipinjam,dikembalikan,expired'
+        ]);
+
+        DB::transaction(function () use ($request, $id) {
+
+            $p = Peminjaman::findOrFail($id);
+            $inventory = Inventory::find($p->inventory_id);
+
+            if ($request->status === 'dikembalikan' && $p->status !== 'dikembalikan') {
+                if ($inventory) {
+                    $inventory->jumlah += 1;
+                    $inventory->status = $inventory->jumlah > 0 ? 'tersedia' : 'habis';
+                    $inventory->save();
+                }
             }
 
-            if (!$peminjamId) {
-                throw new \Exception('ID peminjam tidak valid.');
-            }
-
-            if ($peminjaman->inventory_id != $request->inventory_id) {
-                Inventory::find($peminjaman->inventory_id)?->update(['status' => 'tersedia']);
-                Inventory::find($request->inventory_id)?->update(['status' => 'dipinjam']);
-            }
-
-            $peminjaman->update([
-                'peminjam_id' => $peminjamId,
-                'role' => $request->role,
-                'inventory_id' => $request->inventory_id,
-                'tanggal_pinjam' => $request->tanggal_pinjam,
-                'tanggal_kembali' => $request->tanggal_kembali,
-                'keterangan' => $request->keterangan,
-            ]);
+            $p->status = $request->status;
+            $p->save();
         });
 
-        return redirect()->route('peminjaman.index')
-            ->with('success', 'Data peminjaman berhasil diperbarui.');
-
-    } catch (\Exception $e) {
-        return redirect()->back()
-            ->withInput()
-            ->withErrors(['error' => $e->getMessage()]);
+        return back()->with('success', 'Status peminjaman diperbarui.');
     }
-}
 
     /**
      * ❌ Hapus peminjaman
@@ -336,7 +370,9 @@ public function update(Request $request, $id)
             $inventory = Inventory::find($peminjaman->inventory_id);
 
             if ($inventory) {
-                $inventory->update(['status' => 'tersedia']);
+                $inventory->jumlah += 1;
+                $inventory->status = $inventory->jumlah > 0 ? 'tersedia' : 'habis';
+                $inventory->save();
             }
 
             $peminjaman->delete();
@@ -345,6 +381,97 @@ public function update(Request $request, $id)
         return redirect()->route('peminjaman.index')
             ->with('success', 'Data peminjaman berhasil dihapus.');
     }
+
+    /**
+     * Helper Query Laporan
+     */
+    private function filteredQuery($request)
+    {
+        return Peminjaman::with('inventory')
+            ->when($request->tanggal_awal, fn($q) =>
+                $q->whereDate('tanggal_pinjam', '>=', $request->tanggal_awal)
+            )
+            ->when($request->tanggal_akhir, fn($q) =>
+                $q->whereDate('tanggal_pinjam', '<=', $request->tanggal_akhir)
+            )
+            ->when($request->status, fn($q) =>
+                $q->where('status', $request->status)
+            )
+            ->orderBy('tanggal_pinjam', 'desc');
+    }
+
+    /**
+     * 📄 Halaman Laporan
+     */
+  public function laporan(Request $request)
+{
+    $query = Peminjaman::query();
+
+    // Filter tanggal
+    if ($request->tanggal_awal && $request->tanggal_akhir) {
+        $query->whereBetween('tanggal_pinjam', [
+            $request->tanggal_awal,
+            $request->tanggal_akhir
+        ]);
+    }
+
+    // Filter status
+    if ($request->status) {
+        $query->where('status', $request->status);
+    }
+
+    $data = $query->with(['inventory', 'student', 'teacher'])->get();
+
+    return Inertia::render('Laporan/Index', [
+        'data' => $data,
+        'filters' => [
+            'tanggal_awal' => $request->tanggal_awal,
+            'tanggal_akhir' => $request->tanggal_akhir,
+            'status' => $request->status,
+        ]
+    ]);
+}
+
+
+    /**
+     * 📥 Download PDF
+     */
+    public function downloadPdf(Request $request)
+    {
+        $data = $this->filteredQuery($request)->get();
+
+        $pdf = Pdf::loadView('pdf.laporan_peminjaman', ['data' => $data]);
+
+        return $pdf->download('laporan_peminjaman.pdf');
+    }
+
+    /**
+     * 📥 Download Excel
+     */
+public function exportExcel(Request $request)
+{
+    $query = Peminjaman::query();
+
+    // Filter tanggal
+    if ($request->tanggal_awal && $request->tanggal_akhir) {
+        $query->whereBetween('tanggal_pinjam', [
+            $request->tanggal_awal,
+            $request->tanggal_akhir
+        ]);
+    }
+
+    // Filter status
+    if ($request->status) {
+        $query->where('status', $request->status);
+    }
+
+    // Ambil data dengan relasi
+    $data = $query->with(['inventory', 'student', 'teacher'])->get();
+
+    // Download Excel
+    return Excel::download(new PeminjamanExport($data), 'laporan_peminjaman.xlsx');
+}
+
 
     /**
      * 📡 API - Cek ID peminjam (NISIN / NIP)
