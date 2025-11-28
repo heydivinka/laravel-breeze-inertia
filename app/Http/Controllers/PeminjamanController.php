@@ -31,6 +31,10 @@ class PeminjamanController extends Controller
                 $peminjam = $p->role === 'murid'
                     ? Student::where('nisin', $p->peminjam_id)->first()
                     : Teacher::where('nip', $p->peminjam_id)->first();
+                // Auto-update status expired untuk peminjaman yang lewat tanggal kembali
+                Peminjaman::where('status', 'dipinjam')
+                    ->whereDate('tanggal_kembali', '<', now())
+                    ->update(['status' => 'expired']);
 
                 return [
                     'id' => $p->id,
@@ -335,30 +339,33 @@ class PeminjamanController extends Controller
      * 🔄 Update Status + Kembalikan Stok
      */
     public function updateStatus(Request $request, $id)
-    {
-        $request->validate([
-            'status' => 'required|in:dipinjam,dikembalikan,expired'
-        ]);
+{
+    try {
+        $peminjaman = Peminjaman::findOrFail($id);
 
-        DB::transaction(function () use ($request, $id) {
+        if ($peminjaman->status === 'dikembalikan') {
+            return back()->with('error', 'Barang sudah dikembalikan sebelumnya.');
+        }
 
-            $p = Peminjaman::findOrFail($id);
-            $inventory = Inventory::find($p->inventory_id);
+        // Update status
+        $peminjaman->status = 'dikembalikan';
+        $peminjaman->save();
 
-            if ($request->status === 'dikembalikan' && $p->status !== 'dikembalikan') {
-                if ($inventory) {
-                    $inventory->jumlah += 1;
-                    $inventory->status = $inventory->jumlah > 0 ? 'tersedia' : 'habis';
-                    $inventory->save();
-                }
-            }
+        // Kembalikan stok barang (PAKAI jumlah, BUKAN stok)
+        $inv = Inventory::find($peminjaman->inventory_id);
+        if ($inv) {
+            $inv->jumlah = $inv->jumlah + 1;
+            $inv->status = $inv->jumlah > 0 ? 'tersedia' : 'habis';
+            $inv->save();
+        }
 
-            $p->status = $request->status;
-            $p->save();
-        });
+        return back()->with('success', 'Status berhasil diperbarui dan stok dikembalikan.');
 
-        return back()->with('success', 'Status peminjaman diperbarui.');
+    } catch (\Exception $e) {
+        return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
     }
+}
+
 
     /**
      * ❌ Hapus peminjaman
@@ -431,6 +438,8 @@ class PeminjamanController extends Controller
         ]
     ]);
 }
+
+
 
 
     /**

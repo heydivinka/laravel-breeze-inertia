@@ -1,7 +1,9 @@
 import { useState, useRef } from "react";
 import { ChevronUp, ChevronDown, Plus, CheckCircle, Download } from "lucide-react";
 import StatusBadge from "@/Components/StatusBadge";
+const csrf = document.querySelector('meta[name="csrf-token"]').content;
 import Swal from "sweetalert2";
+import { router } from "@inertiajs/react";
 
 /**
  * Tabel Peminjaman
@@ -50,26 +52,45 @@ export default function PeminjamanTable({ data = [], onDelete, onEdit, onAdd }) 
     const currentData = sortedData.slice(indexOfFirst, indexOfLast);
     const totalPages = Math.ceil(sortedData.length / rowsPerPage);
 
-    const handleReturn = (id) => {
-        Swal.fire({
-            title: "Konfirmasi Pengembalian",
-            text: "Apakah peminjaman sudah dikembalikan?",
-            icon: "question",
-            showCancelButton: true,
-            confirmButtonText: "Ya, Dikembalikan",
-        }).then((result) => {
-            if (result.isConfirmed) {
-                fetch(`/peminjaman/${id}/status`, {
-                    method: "PATCH",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
-                    },
-                    body: JSON.stringify({ status: "dikembalikan" }),
-                }).then(() => window.location.reload());
+const handleReturn = (id) => {
+    Swal.fire({
+        title: "Konfirmasi Pengembalian",
+        text: "Apakah peminjaman sudah dikembalikan?",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Ya, Dikembalikan",
+        cancelButtonText: "Batal",
+    }).then((result) => {
+        if (!result.isConfirmed) return;
+
+        router.patch(
+            `/peminjaman/${id}/status`,
+            { status: "dikembalikan" },
+            {
+                preserveScroll: true,
+                onSuccess: (page) => {
+                    const message = page.props.flash?.success || "Status peminjaman diperbarui.";
+                    Swal.fire({
+                        title: "Berhasil!",
+                        text: message,
+                        icon: "success",
+                        timer: 2000,
+                        showConfirmButton: false,
+                    });
+                },
+                onError: (errors) => {
+                    const message = errors.error || errors.message || "Status gagal diperbarui.";
+                    Swal.fire({
+                        title: "Gagal!",
+                        text: message,
+                        icon: "error",
+                    });
+                },
             }
-        });
-    };
+        );
+    });
+};
+
 
     const handleExport = async (type) => {
         Swal.fire({

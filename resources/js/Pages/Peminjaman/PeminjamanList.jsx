@@ -53,7 +53,7 @@ export default function PeminjamanList({ auth, peminjaman: initialData }) {
     };
 
     const handleAdd = () => {
-        router.get(route("peminjaman.create"));
+        router.get(route("peminjaman.add"));   // FIXED
     };
 
     return (
