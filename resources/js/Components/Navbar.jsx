@@ -66,7 +66,7 @@ export default function Navbar({ auth = { user: { name: 'Jane Doe', role: 'Syste
             {/* Navigasi Kiri (Biasanya Title Halaman atau Search Bar) */}
             <div className="flex items-center gap-6">
                 <div className="text-xl font-extrabold tracking-wider text-emerald-600">
-                    PRO-APP
+                    SkanicPinjam
                 </div>
                 {/* Simulated Search Bar for professional feel */}
                 <input 

@@ -36,8 +36,8 @@ const router = {
 const usePage = () => ({ url: typeof window !== 'undefined' ? window.location.pathname : '/' });
 
 /* ------------------------- */
-/* Framer Motion Variants    */
-/* ------------------------- */
+ /* Framer Motion Variants    */
+ /* ------------------------- */
 const itemHoverVariants = {
     hover: { scale: 1.02, x: 6, transition: { type: "spring", stiffness: 300, damping: 20 } },
     rest: { scale: 1, x: 0, transition: { type: "spring", stiffness: 300, damping: 20 } },
@@ -55,8 +55,8 @@ const textTransitionVariants = {
 };
 
 /* ------------------------- */
-/* SubMenu Component         */
-/* ------------------------- */
+ /* SubMenu Component         */
+ /* ------------------------- */
 const SubMenu = ({ item, open, toggleSubmenu, activeSubmenu, url }) => {
     const isSubmenuOpen = activeSubmenu === item.name;
     // Menggunakan startsWith karena kita tidak memiliki fungsi Inertia.js route() yang sebenarnya
@@ -73,12 +73,12 @@ const SubMenu = ({ item, open, toggleSubmenu, activeSubmenu, url }) => {
                 initial="rest"
                 className={`flex items-center justify-between gap-3 px-3 py-3 rounded-lg font-medium transition-all duration-300 w-full text-left ${
                     isCurrentlyActive
-                        ? "bg-indigo-50 text-indigo-700 shadow-sm"
+                        ? "bg-emerald-50 text-emerald-700 shadow-sm"
                         : "hover:bg-gray-100 text-gray-700"
                 }`}
             >
                 <span className="flex items-center gap-3">
-                    <span className="text-indigo-600">{item.icon}</span>
+                    <span className="text-emerald-600">{item.icon}</span>
                     {open && <span className="truncate">{item.name}</span>}
                 </span>
 
@@ -107,7 +107,7 @@ const SubMenu = ({ item, open, toggleSubmenu, activeSubmenu, url }) => {
                                     href={sub.path}
                                     className={`px-3 py-2 text-sm rounded-md transition-all duration-200 ${
                                         isSubActive
-                                            ? "bg-indigo-100 text-indigo-700 font-semibold border-l-4 border-indigo-300"
+                                            ? "bg-emerald-100 text-emerald-700 font-semibold border-l-4 border-emerald-300"
                                             : "hover:bg-gray-100 text-gray-700"
                                     }`}
                                 >
@@ -123,8 +123,8 @@ const SubMenu = ({ item, open, toggleSubmenu, activeSubmenu, url }) => {
 };
 
 /* ------------------------- */
-/* NavItem Component         */
-/* ------------------------- */
+ /* NavItem Component         */
+ /* ------------------------- */
 const NavItem = ({ item, open, url }) => {
     const isActive = url === item.path;
     return (
@@ -133,11 +133,11 @@ const NavItem = ({ item, open, url }) => {
                 href={item.path}
                 className={`flex items-center gap-3 px-3 py-3 rounded-lg font-medium transition-all duration-300 ${
                     isActive
-                        ? "bg-indigo-50 text-indigo-700 shadow-sm"
+                        ? "bg-emerald-50 text-emerald-700 shadow-sm"
                         : "hover:bg-gray-100 text-gray-700"
                 }`}
             >
-                <span className="text-indigo-600">{item.icon}</span>
+                <span className="text-emerald-600">{item.icon}</span>
                 <AnimatePresence>
                     {open && (
                         <motion.span 
@@ -156,8 +156,8 @@ const NavItem = ({ item, open, url }) => {
 };
 
 /* ------------------------- */
-/* Sidebar Component         */
-/* ------------------------- */
+ /* Sidebar Component         */
+ /* ------------------------- */
 export default function Sidebar({ isOpen, toggleSidebar }) {
     // Tetapkan nilai prop isOpen ke variabel lokal untuk kemudahan
     const open = isOpen; 
@@ -241,7 +241,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
         name: "Archive",
         icon: <Archive size={20} />,
         submenu: [{ name: "Old Records", path: "/archive" }],
-    },
+    ],
 ];
 
 
@@ -267,21 +267,21 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                 <div className="flex items-center gap-3">
                     <AnimatePresence>
                         {open && (
-                            <motion.span
+                                <motion.span
                                 // Mempercepat animasi teks logo saat keluar
                                 initial={{ opacity: 0, x: -8 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -8, transition: { duration: 0.1 } }}
-                                className="font-extrabold text-lg tracking-wide text-indigo-600 select-none"
+                                className="font-extrabold text-lg tracking-wide text-emerald-600 select-none"
                             >
-                                PRO-APP
+                                SkanicPinjam
                             </motion.span>
                         )}
                     </AnimatePresence>
                     {!open && (
-                        <div className="w-8 h-8 flex items-center justify-center rounded-md bg-indigo-50">
+                        <div className="w-8 h-8 flex items-center justify-center rounded-md bg-emerald-50">
                             <svg
-                                className="w-5 h-5 text-indigo-600"
+                                className="w-5 h-5 text-emerald-600"
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
@@ -301,7 +301,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                 <button
                     onClick={toggleSidebar} 
                     aria-label={open ? "Collapse Sidebar" : "Expand Sidebar"}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full z-10 text-indigo-600 hover:bg-indigo-50 transition-colors duration-200"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full z-10 text-emerald-600 hover:bg-emerald-50 transition-colors duration-200"
                 >
                     <motion.div animate={{ rotate: open ? 0 : 180 }} transition={{ duration: 0.15 }}>
                         <ChevronLeft size={18} />
@@ -332,10 +332,10 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                 <Link
                     href="/settings"
                     className={`flex items-center gap-3 px-3 py-3 rounded-lg font-medium transition-all duration-200 ${
-                        url === "/settings" ? "bg-indigo-50 text-indigo-700" : "hover:bg-gray-100 text-gray-700"
+                        url === "/settings" ? "bg-emerald-50 text-emerald-700" : "hover:bg-gray-100 text-gray-700"
                     }`}
                 >
-                    <span className="text-indigo-600">
+                    <span className="text-emerald-600">
                         <Settings size={18} />
                     </span>
                     <AnimatePresence>
@@ -360,7 +360,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                         transition={{ duration: 0.15 }}
                         className="p-3 rounded-xl bg-gray-50 flex items-center overflow-hidden"
                     >
-                        <UserCircle size={40} className="text-indigo-600 flex-shrink-0" />
+                        <UserCircle size={40} className="text-emerald-600 flex-shrink-0" />
                         <motion.div
                             initial={{ opacity: 0, x: 8 }}
                             animate={{ opacity: 1, x: 0 }}
@@ -384,3 +384,4 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
         </aside>
     );
 }
+
